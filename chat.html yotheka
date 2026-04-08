@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>OurChat</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<style>
+/* ===== GLOBAL ===== */
+* { margin:0; padding:0; box-sizing:border-box; font-family:Arial, sans-serif; }
+body { background: linear-gradient(135deg, #0b3d2e, #1f7a5c); min-height:100vh; overflow:hidden; color:white; }
+
+/* ===== AUTH MODAL ===== */
+#authModal {
+  display: flex; justify-content:center; align-items:center; position:fixed; top:0; left:0;
+  width:100%; height:100%; background: rgba(0,0,0,0.7); z-index:50; flex-direction:column;
+}
+#authModal > div {
+  background: rgba(255,255,255,0.1); backdrop-filter: blur(10px); padding:30px; border-radius:12px; color:white;
+  display:flex; flex-direction:column; gap:10px; min-width:300px;
+}
+#authModal input { padding:10px; border-radius:8px; border:none; outline:none; }
+#authModal button { padding:10px; border-radius:8px; border:none; background:#00a86b; color:white; cursor:pointer; }
+#authModal p { cursor:pointer; font-size:0.9rem; }
+
+/* ===== SIDEBAR ===== */
+#sidebar { position:fixed; left:0; top:0; width:220px; height:100vh; background: rgba(255,255,255,0.12);
+backdrop-filter: blur(12px); border-right:1px solid rgba(255,255,255,0.2); padding:10px; z-index:15; transition:0.3s; }
+#sidebar h3 { color:#fff; margin-bottom:10px; }
+.user-item { display:flex; align-items:center; padding:5px; cursor:pointer; gap:8px; position:relative; }
+.user-item img { width:32px; height:32px; border-radius:50%; }
+.user-item .badge { position:absolute; right:5px; top:5px; background:red; color:white; border-radius:50%; font-size:0.7rem; padding:2px 6px; display:none; }
+#sidebar button { width:100%; margin-top:10px; padding:8px; border:none; border-radius:8px; background: rgba(0,128,0,0.5); color:white; }
+
+/* ===== TOP BAR ===== */
+.top-bar { height:60px; background: rgba(0,80,40,0.6); backdrop-filter: blur(12px); color:white;
+display:flex; align-items:center; justify-content:space-between; padding:0 15px; position:fixed; top:0; left:220px;
+width:calc(100% - 220px); z-index:5; }
+
+/* ===== CHAT HEADER ===== */
+#chatHeader { position:fixed; top:60px; left:220px; width:calc(100% - 220px); padding:10px 15px;
+background: rgba(255,255,255,0.15); backdrop-filter: blur(10px); color:#fff; display:flex; justify-content:space-between; display:none; }
+#typingStatus { animation: glow 1.2s infinite; }
+@keyframes glow { 0% { text-shadow:0 0 5px #00ffae; } 50% { text-shadow:0 0 15px #00ffae; } 100% { text-shadow:0 0 5px #00ffae; } }
+
+/* ===== CONTENT AREA ===== */
+.content-area { position:fixed; top:120px; bottom:140px; left:220px; width:calc(100% - 220px); overflow-y:auto;
+padding:15px; background: rgba(255,255,255,0.08); backdrop-filter: blur(8px); display:none; }
+
+/* ===== MESSAGE ===== */
+.message-container { display:flex; gap:10px; margin-bottom:12px; align-items:flex-end; cursor:pointer; }
+.message-container.user { flex-direction:row-reverse; }
+.message { padding:10px; border-radius:18px; background: rgba(255,255,255,0.2); color:white; position:relative; max-width:70%; word-wrap:break-word; }
+.message.user { background: rgba(0,255,150,0.25); max-width:70%; }
+.avatar { width:32px; height:32px; border-radius:50%; cursor:pointer; }
+
+/* ===== BOTTOM BAR ===== */
+.bottom-bar { position:fixed; bottom:0; left:220px; width:calc(100% - 220px); padding:12px; background: rgba(255,255,255,0.18); backdrop-filter: blur(12px); display:flex; gap:10px; display:none; }
+.bottom-bar textarea { width:100%; border-radius:25px; padding:12px; resize:none; height:50px; overflow-y:auto; }
+.send-btn { background:#00a86b; color:white; border:none; border-radius:50%; padding:12px; }
+
+/* ===== PRIVATE CHAT ===== */
+#privateChat { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,60,0,0.95); color:white; z-index:20; flex-direction:column; }
+#privateChatHeader { height:60px; display:flex; align-items:center; padding:0 15px; background:#006400; justify-content:space-between; }
+#privateContent { flex:1; overflow-y:auto; padding:15px; }
+#privateInputBar { display:flex; padding:10px; gap:10px; background:#004d00; }
+#privateInputBar textarea { flex:1; border-radius:25px; padding:10px; }
+
+/* ===== PROFILE MODAL ===== */
+#profileModal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); justify-content:center; align-items:center; z-index:60; }
+#profileModal > div { background:rgba(255,255,255,0.1); backdrop-filter:blur(10px); padding:20px; border-radius:12px; color:white; min-width:250px; text-align:center; position:relative; }
+#profileModal img { width:80px; height:80px; border-radius:50%; margin-bottom:10px; }
+#profileModal span { position:absolute; top:5px; right:10px; cursor:pointer; font-size:1.2rem; }
+
+/* ===== MOBILE FIX ===== */
+@media (max-width:768px) {
+  #sidebar { left:-220px; }
+  #sidebar.active { left:0; }
+  .top-bar { left:0; width:100%; }
+  #chatHeader, .content-area, .bottom-bar { left:0; width:100%; }
+}
+</style>
+</head>
+<body>
+
+<!-- ===== AUTH MODAL ===== -->
+<div id="authModal">
+  <div>
+    <h2 id="authTitle">Create Account</h2>
+    <div id="registerFields">
+      <input id="firstName" placeholder="First Name">
+      <input id="lastName" placeholder="Last Name">
+      <input id="phone" placeholder="Phone (10 digits)" maxlength="10">
+      <input id="password" type="password" placeholder="Password">
+      <input id="profilePic" type="file" accept="image/*">
+    </div>
+    <div id="loginFields" style="display:none;">
+      <input id="loginPhone" placeholder="Phone">
+      <input id="loginPassword" type="password" placeholder="Password">
+    </div>
+    <button id="authBtn">Create Account</button>
+    <p id="switchAuth">Already have account? Login</p>
+    <p id="authMsg"></p>
+  </div>
+</div>
+
+<!-- ===== SIDEBAR ===== -->
+<div id="sidebar">
+  <h3>Users</h3>
+  <div id="userList"></div>
+  <button id="publicBtn">Public Chat</button>
+</div>
+
+<!-- ===== TOP BAR ===== -->
+<div class="top-bar">
+  <i class="fa fa-bars" id="menuBtn"></i>
+  <span>OurChat</span>
+  <i class="fa fa-user"></i>
+</div>
+
+<!-- ===== CHAT HEADER ===== -->
+<div id="chatHeader">
+  <div id="onlineCount">0 Online</div>
+  <div id="typingStatus"></div>
+</div>
+
+<!-- ===== CHAT CONTENT ===== -->
+<div class="content-area" id="contentArea"></div>
+
+<!-- ===== BOTTOM BAR ===== -->
+<div class="bottom-bar">
+  <textarea id="messageInput"></textarea>
+  <button class="send-btn" id="sendBtn">➤</button>
+</div>
+
+<!-- ===== PRIVATE CHAT ===== -->
+<div id="privateChat">
+  <div id="privateChatHeader">
+    <i class="fa fa-arrow-left" id="backToPublic" style="cursor:pointer;"></i>
+    <span id="privateChatUser">Private Chat</span>
+    <div></div>
+  </div>
+  <div id="privateContent"></div>
+  <div id="privateInputBar">
+    <textarea id="privateInput"></textarea>
+    <button id="privateSend">➤</button>
+  </div>
+</div>
+
+<!-- ===== PROFILE MODAL ===== -->
+<div id="profileModal">
+  <div>
+    <span id="closeProfile">&times;</span>
+    <img id="profileAvatar" src="">
+    <h3 id="profileName"></h3>
+    <p id="profilePhone"></p>
+  </div>
+</div>
+
+<audio id="notifSound" src="https://www.soundjay.com/buttons/sounds/button-16.mp3"></audio>
+
+<script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+<script>
+const socket = io("https://ourchat-by-chris.onrender.com"); // backend URL
+let myUser = null;
+let currentPrivateUser = null;
+let unreadPublic = 0;
+const privateUnread = {};
+
+// ===== SHOW CHAT =====
+function showChat() {
+  document.getElementById("chatHeader").style.display = "flex";
+  document.getElementById("contentArea").style.display = "block";
+  document.querySelector(".bottom-bar").style.display = "flex";
+}
+
+// ===== AUDIO =====
+function playSound() {
+  document.getElementById("notifSound").play().catch(() => {});
+}
+
+// ===== AUTH MODAL =====
+const authModal = document.getElementById("authModal");
+const authTitle = document.getElementById("authTitle");
+const registerFields = document.getElementById("registerFields");
+const loginFields = document.getElementById("loginFields");
+const authBtn = document.getElementById("authBtn");
+const switchAuth = document.getElementById("switchAuth");
+const authMsg = document.getElementById("authMsg");
+let isRegister = true;
+
+switchAuth.onclick = () => {
+  isRegister = !isRegister;
+  if (isRegister) {
+    authTitle.textContent = "Create Account";
+    registerFields.style.display = "block";
+    loginFields.style.display = "none";
+    authBtn.textContent = "Create Account";
+    switchAuth.textContent = "Already have account? Login";
+  } else {
+    authTitle.textContent = "Login";
+    registerFields.style.display = "none";
+    loginFields.style.display = "block";
+    authBtn.textContent = "Login";
+    switchAuth.textContent = "Don't have account? Create Account";
+  }
+};
+
+// ===== CHAT INITIALIZATION =====
+async function initChat() {
+  await loadUsers();
+  await loadPublicMessages();
+  socket.emit("join", myUser.id);
+
+  socket.on("newMessage", msg => {
+    addMessage(msg, msg.senderId === myUser.id);
+    if (msg.senderId !== myUser.id) {
+      unreadPublic++;
+      updatePublicBadge();
+      playSound();
+    }
+  });
+
+  socket.on("privateMessage", data => {
+    if (data.to === myUser.id) {
+      if (currentPrivateUser && currentPrivateUser.id === data.from.id) {
+        addPrivateMessage(data.msg, false);
+      } else {
+        privateUnread[data.from.id] = (privateUnread[data.from.id] || 0) + 1;
+        updatePrivateBadge(data.from.id);
+        playSound();
+      }
+    }
+  });
+
+  socket.on("typing", data => showTyping(data));
+
+  socket.on("usersUpdate", users => loadUsers(users)); // Real-time online users
+}
+
+// ===== USERS & ONLINE =====
+async function loadUsers(usersFromServer = null) {
+  try {
+    let users = usersFromServer;
+    if (!users) {
+      const res = await fetch("https://ourchat-by-chris.onrender.com/users");
+      users = await res.json();
+    }
+
+    const userList = document.getElementById("userList");
+    userList.innerHTML = "";
+
+    users.filter(u => u.id !== myUser.id).forEach(u => {
+      const div = document.createElement("div");
+      div.className = "user-item";
+      div.dataset.userid = u.id;
+      const badgeCount = privateUnread[u.id] || 0;
+      div.innerHTML = `<img src="${u.avatar}"><span>${u.firstName} ${u.lastName}</span><span class="badge" style="display:${badgeCount ? 'inline' : 'none'}">${badgeCount}</span>`;
+      div.onclick = () => openPrivateChat(u);
+      userList.appendChild(div);
+    });
+
+    document.getElementById("onlineCount").textContent = (users.length - 1) + " Online";
+  } catch (err) { console.error(err); }
+}
+
+function updatePrivateBadge(userId) {
+  const div = document.querySelector(`.user-item[data-userid="${userId}"]`);
+  if (div) {
+    const span = div.querySelector(".badge");
+    const count = privateUnread[userId] || 0;
+    span.style.display = count ? "inline" : "none";
+    span.textContent = count;
+  }
+}
+
+// ===== PUBLIC MESSAGES =====
+function addMessage(msg, isUser) {
+  const contentArea = document.getElementById("contentArea");
+  const c = document.createElement("div");
+  c.className = "message-container" + (isUser ? " user" : "");
+  const avatar = document.createElement("img");
+  avatar.className = "avatar";
+  avatar.src = msg.avatar;
+  const m = document.createElement("div");
+  m.className = "message";
+  m.innerHTML = `<b>${msg.senderName || msg.sender}</b><br>${msg.content}<br><small>${new Date(msg.time).toLocaleTimeString()}</small>`;
+  if (isUser) { c.appendChild(m); c.appendChild(avatar); } else { c.appendChild(avatar); c.appendChild(m); }
+
+  c.ondblclick = async () => {
+    if (!isUser) return;
+    if (confirm("Delete this message?")) {
+      await fetch(`https://ourchat-by-chris.onrender.com/publicMessages/${msg._id || ''}`, { method: "DELETE" });
+      c.remove();
+    }
+  };
+
+  contentArea.appendChild(c);
+  contentArea.scrollTop = contentArea.scrollHeight;
+}
+
+async function loadPublicMessages() {
+  try {
+    const res = await fetch("https://ourchat-by-chris.onrender.com/publicMessages");
+    const msgs = await res.json();
+    msgs.forEach(msg => addMessage(msg, msg.senderId === myUser.id));
+  } catch (err) { console.error(err); }
+}
+
+document.getElementById("sendBtn").onclick = () => {
+  const text = document.getElementById("messageInput").value.trim();
+  if (!text) return;
+  const msg = { content: text, senderName: `${myUser.firstName} ${myUser.lastName}`, avatar: myUser.avatar, senderId: myUser.id, time: Date.now() };
+  addMessage(msg, true);
+  document.getElementById("messageInput").value = "";
+  socket.emit("sendMessage", msg);
+};
+
+document.getElementById("messageInput").addEventListener("input", () => {
+  socket.emit("typing", { user: `${myUser.firstName} ${myUser.lastName}` });
+});
+
+// Typing indicator
+function showTyping(data) {
+  const ts = document.getElementById("typingStatus");
+  ts.textContent = data.user + " is typing...";
+  setTimeout(() => { ts.textContent = ""; }, 1500);
+}
+
+// ===== PRIVATE CHAT =====
+const privateChat = document.getElementById("privateChat");
+const privateContent = document.getElementById("privateContent");
+document.getElementById("backToPublic").onclick = () => {
+  privateChat.style.display = "none";
+  currentPrivateUser = null;
+};
+
+function openPrivateChat(user) {
+  currentPrivateUser = user;
+  privateChat.style.display = "flex";
+  document.getElementById("privateChatUser").textContent = user.firstName + " " + user.lastName;
+  privateContent.innerHTML = "";
+  loadPrivateHistory(user.id);
+  privateUnread[user.id] = 0;
+  updatePrivateBadge(user.id);
+}
+
+async function loadPrivateHistory(userId) {
+  try {
+    const res = await fetch(`https://ourchat-by-chris.onrender.com/privateMessages/${myUser.id}/${userId}`);
+    const msgs = await res.json();
+    msgs.forEach(msg => addPrivateMessage({
+      content: msg.content,
+      senderName: msg.senderName,
+      senderAvatar: msg.senderAvatar,
+      senderId: msg.senderId,
+      time: msg.time
+    }, msg.senderId === myUser.id));
+  } catch (err) { console.error(err); }
+}
+
+function addPrivateMessage(msg, isUser) {
+  const c = document.createElement("div");
+  c.className = "message-container" + (isUser ? " user" : "");
+  const avatar = document.createElement("img");
+  avatar.className = "avatar";
+  avatar.src = msg.senderAvatar || msg.avatar;
+  const m = document.createElement("div");
+  m.className = "message";
+  m.innerHTML = `<b>${msg.senderName || msg.sender}</b><br>${msg.content}<br><small>${new Date(msg.time).toLocaleTimeString()}</small>`;
+  if (isUser) { c.appendChild(m); c.appendChild(avatar); } else { c.appendChild(avatar); c.appendChild(m); }
+
+  c.ondblclick = async () => {
+    if (!isUser) return;
+    if (confirm("Delete this message?")) {
+      await fetch(`https://ourchat-by-chris.onrender.com/privateMessages/${msg._id || ''}`, { method: "DELETE" });
+      c.remove();
+    }
+  };
+
+  privateContent.appendChild(c);
+  privateContent.scrollTop = privateContent.scrollHeight;
+}
+
+document.getElementById("privateSend").onclick = () => {
+  if (!currentPrivateUser) return;
+  const text = document.getElementById("privateInput").value.trim();
+  if (!text) return;
+  const msg = { content: text, senderName: `${myUser.firstName} ${myUser.lastName}`, senderAvatar: myUser.avatar, senderId: myUser.id, time: Date.now() };
+  addPrivateMessage(msg, true);
+  document.getElementById("privateInput").value = "";
+  socket.emit("privateMessage", { to: currentPrivateUser.id, msg });
+};
+
+// ===== PUBLIC BADGE =====
+function updatePublicBadge() {
+  const btn = document.getElementById("publicBtn");
+  btn.textContent = unreadPublic ? `Public Chat (${unreadPublic})` : "Public Chat";
+}
+</script>
+</body>
+</html>
