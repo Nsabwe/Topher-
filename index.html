@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>OurMarket</title>
+
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+
+    body {
+      background: #ffffff;
+      color: #555;
+    }
+
+    /* Top Bar */
+    .top-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 15px 20px;
+      border-bottom: 1px solid green;
+      background: white;
+    }
+
+    .top-bar h2 {
+      color: green;
+    }
+
+    .profile-img {
+      width: 50px;
+      height: 50px;
+      border-radius: 50%;
+      border: 1px solid gold;
+      object-fit: cover;
+    }
+
+    /* Main Content */
+    .container {
+      text-align: center;
+      padding: 60px 20px;
+    }
+
+    .container h1 {
+      font-size: 30px;
+      margin-bottom: 20px;
+      color: green; /* Welcome text now green */
+    }
+
+    .container p {
+      max-width: 600px;
+      margin: 0 auto 30px;
+      font-size: 18px;
+      line-height: 1.6;
+    }
+
+    /* Start Button */
+    .start-button {
+      padding: 15px 40px;
+      font-size: 18px;
+      border: 1px solid green;
+      background: gold;
+      color: black;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: 0.3s;
+    }
+
+    .start-button:hover {
+      background: green;
+      color: white;
+    }
+
+    /* Loading Screen */
+    .loading-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: white;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      visibility: hidden;
+      opacity: 0;
+      transition: 0.4s;
+      z-index: 999;
+    }
+
+    .loading-overlay.active {
+      visibility: visible;
+      opacity: 1;
+    }
+
+    .loading-overlay h1 {
+      margin-bottom: 20px;
+      color: green;
+    }
+
+    .loading-percentage {
+      font-size: 60px;
+      font-weight: bold;
+      color: green; /* changed from gold to green */
+    }
+
+    /* Responsive */
+    @media (max-width: 600px) {
+      .container h1 {
+        font-size: 28px;
+      }
+
+      .profile-img {
+        width: 40px;
+        height: 40px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- Top Bar -->
+  <div class="top-bar">
+    <h2>OurMarket</h2>
+    <img src="https://res.cloudinary.com/diu4urkpt/image/upload/v1776465560/jkk9qviyhyigyynytbjn.jpg" class="profile-img" alt="Profile">
+  </div>
+
+  <!-- Main Content -->
+  <div class="container">
+    <h1>Welcome to OurMarket</h1>
+    <p>
+      OurMarket is your trusted online marketplace where you can easily buy and sell products.
+      Discover great deals and connect with others in one place.
+    </p>
+
+    <button class="start-button" onclick="startLoading()">Start</button>
+  </div>
+
+  <!-- Loading Screen -->
+  <div class="loading-overlay" id="loading">
+    <h1><i>OurMarket</i></h1>
+    <div class="loading-percentage" id="loadingPercentage">0%</div>
+  </div>
+
+  <script>
+    function startLoading() {
+      const loading = document.getElementById('loading');
+      const percentText = document.getElementById('loadingPercentage');
+
+      loading.classList.add('active');
+
+      let percent = 0;
+
+      const interval = setInterval(() => {
+        percent++;
+        percentText.textContent = percent + "%";
+
+        if (percent >= 100) {
+          clearInterval(interval);
+          setTimeout(() => {
+            window.location.href = "feed.html";
+          }, 300);
+        }
+      }, 15);
+    }
+  </script>
+
+</body>
+</html>
